@@ -26,8 +26,12 @@
 /* USER CODE BEGIN Includes */
 #include "stm32l475e_iot01.h"
 #include "stm32l475e_iot01_hsensor.h"
+#include "stm32l475e_iot01_tsensor.h"
 #include <math.h>
 #include <stdio.h>
+//#include "event_groups.h"
+//#include "FreeRTOS.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -37,6 +41,12 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+/* Bits used by the three tasks. */
+//#define TASK_0_BIT        ( 1 << 0 )
+//#define TASK_1_BIT        ( 1 << 1 )
+/*#define TASK_2_BIT        ( 1 << 2 )*/
+
+//#define ALL_SYNC_BITS (TASK_0_BIT | TASK_1_BIT)
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -60,12 +70,24 @@ PCD_HandleTypeDef hpcd_USB_OTG_FS;
 
 osThreadId_t defaultTaskHandle;
 osThreadId_t humidityHandle;
+osThreadId_t temperatureHandle;
+osThreadId_t pressureHandle;
 /* USER CODE BEGIN PV */
-float hum_value = 0; // Measured temperature value
+float hum_value = 0; // Measured humidity value
+float temp_value = 0; // Measured temperature value
 char str_tmp[100] = ""; // Formatted message to display the temperature v
+char str_hum[100] = ""; // Formatted message to display the humidity h
 uint8_t msg1[] = "****** Humidity values measurement ******\n\n\r";
 uint8_t msg2[] = "=====> Initialize Humidity sensor HTS221 \r\n";
 uint8_t msg3[] = "=====> Humidity sensor HTS221 initialized \r\n ";
+uint8_t msg4[] = "****** Temperature values measurement ******\n\n\r";
+uint8_t msg5[] = "=====> Initialize Temperature sensor HTS221 \r\n";
+uint8_t msg6[] = "=====> Temperature sensor HTS221 initialized \r\n ";
+//EventGroupHandle_t xEventBits;
+const uint32_t TASK_0_BIT = (1 << 0);
+const uint32_t TASK_1_BIT = (1 << 1);
+const uint32_t ALL_SYNC_BITS = (1 << 0 | 1 << 1);
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -80,6 +102,8 @@ static void MX_USART3_UART_Init(void);
 static void MX_USB_OTG_FS_PCD_Init(void);
 void StartDefaultTask(void *argument);
 void StartTask02(void *argument);
+void StartTask03(void *argument);
+void StartTask04(void *argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -131,6 +155,36 @@ int main(void)
   HAL_UART_Transmit(&huart1,msg2,sizeof(msg2),1000);
   BSP_HSENSOR_Init();
   HAL_UART_Transmit(&huart1,msg3,sizeof(msg3),1000);
+  HAL_UART_Transmit(&huart1,msg4,sizeof(msg4),1000);
+  HAL_UART_Transmit(&huart1,msg5,sizeof(msg5),1000);
+   BSP_TSENSOR_Init();
+  HAL_UART_Transmit(&huart1,msg6,sizeof(msg6),1000);
+
+   /*CODICE EVENT GROUP*/
+
+   /* Declare a variable to hold the created event group. */
+  	    //EventGroupHandle_t xCreatedEventGroup;
+
+  	    /* Attempt to create the event group. */
+  	    //xEventBits = xEventGroupCreate();
+
+  	    /* Was the event group created successfully? */
+  	   // if( xEventBits == NULL )
+  	    //{
+  	        /* The event group was not created because there was insufficient
+  	        FreeRTOS heap available. */
+  	    	//snprintf(str_tmp,100,"ERRORE, NON FUNZIONA");
+  	    	//HAL_UART_Transmit(&huart1,( uint8_t * )str_tmp,sizeof(str_tmp),1000);
+  	    //}
+  	    //else
+  	    //{
+  	        /* The event group was created. */
+  	    	//snprintf(str_tmp,100,"GIUSTO, FUNZIONA");
+  	    	//HAL_UART_Transmit(&huart1,( uint8_t * )str_tmp,sizeof(str_tmp),1000);
+  	    //}
+
+   /*FINE CODICE EVENT GROUP*/
+
   /* USER CODE END 2 */
 
   osKernelInitialize();
@@ -167,6 +221,22 @@ int main(void)
     .stack_size = 128
   };
   humidityHandle = osThreadNew(StartTask02, NULL, &humidity_attributes);
+
+  /* definition and creation of temperature */
+  const osThreadAttr_t temperature_attributes = {
+    .name = "temperature",
+    .priority = (osPriority_t) osPriorityLow2,
+    .stack_size = 128
+  };
+  temperatureHandle = osThreadNew(StartTask03, NULL, &temperature_attributes);
+
+  /* definition and creation of pressure */
+  const osThreadAttr_t pressure_attributes = {
+    .name = "pressure",
+    .priority = (osPriority_t) osPriorityLow1,
+    .stack_size = 128
+  };
+  pressureHandle = osThreadNew(StartTask04, NULL, &pressure_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -726,10 +796,35 @@ static void MX_GPIO_Init(void)
 void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN 5 */
+	//TickType_t xLastWakeTime;
+	//xLastWakeTime = xTaskGetTickCount();
+	//const TickType_t xDelay250ms = pdMS_TO_TICKS( 250 );
   /* Infinite loop */
   for(;;)
   {
-    osDelay(1);
+    //osDelay(1);
+
+	  snprintf(str_tmp,100,"ciao, sono il main\r\n");
+	  HAL_UART_Transmit(&huart1,( uint8_t * )str_tmp,sizeof(str_tmp),1000);
+
+	  //vTaskDelay(xDelay250ms);
+	  //vTaskResume(StartDefaultTask);
+	  osDelay(250);
+	//uint32_t result = xEventGroupWaitBits(xEventBits, ALL_SYNC_BITS,
+														//pdTRUE,
+														//pdTRUE,
+														//3000);
+	//if (result == ALL_SYNC_BITS) {
+		//puts("va tutto bene");
+	//}
+	//else {
+		//if(!(result & TASK_0_BIT)) {
+			//puts("il task 2 ha smesso di rispondere");
+		//}
+		//if(!(result & TASK_1_BIT)) {
+			//puts("il task 3 ha smesso di rispondere");
+		//}
+	//}
   }
   /* USER CODE END 5 */ 
 }
@@ -744,6 +839,11 @@ void StartDefaultTask(void *argument)
 void StartTask02(void *argument)
 {
   /* USER CODE BEGIN StartTask02 */
+	//EventBits_t uxReturn;
+	//TickType_t xTicksToWait = 1000 / portTICK_PERIOD_MS;
+	//TickType_t xLastWakeTime;
+	//xLastWakeTime = xTaskGetTickCount();
+	//const TickType_t xDelay250ms = pdMS_TO_TICKS( 250 );
   /* Infinite loop */
   for(;;)
   {
@@ -751,11 +851,99 @@ void StartTask02(void *argument)
 	  int tmpInt1 = hum_value;
 	  float tmpFrac = hum_value - tmpInt1;
 	  int tmpInt2 = trunc(tmpFrac * 100);
-	  snprintf(str_tmp,100," HUMIDITY = %d.%02d\n\r", tmpInt1, tmpInt2);
-	  HAL_UART_Transmit(&huart1,( uint8_t * )str_tmp,sizeof(str_tmp),1000);
-	  //osDelay(1);
+	  snprintf(str_hum,100," HUMIDITY = %d.%02d\n\r", tmpInt1, tmpInt2);
+	  HAL_UART_Transmit(&huart1,( uint8_t * )str_hum,sizeof(str_hum),1000);
+	  //xEventGroupSetBits(xEventBits, TASK_0_BIT);
+	 // vTaskDelay(xDelay250ms);
+	  //vTaskResume(StartTask02);
+
+	  osDelay(250);
+
+      /* Set bit 0 in the event group to note this task has reached the
+      sync point.  The other two tasks will set the other two bits defined
+      by ALL_SYNC_BITS.  All three tasks have reached the synchronisation
+      point when all the ALL_SYNC_BITS are set.  Wait a maximum of 100ms
+      for this to happen. */
+      //uxReturn = xEventGroupSync( xEventBits,
+      //                            TASK_0_BIT,
+      //                            ALL_SYNC_BITS,
+      //                            xTicksToWait );
+
+      //if( ( uxReturn & ALL_SYNC_BITS ) == ALL_SYNC_BITS )
+      //{
+          /* All three tasks reached the synchronisation point before the call
+          to xEventGroupSync() timed out. */
+      //}
   }
+  //vTaskDelete(NULL);
   /* USER CODE END StartTask02 */
+}
+
+/* USER CODE BEGIN Header_StartTask03 */
+/**
+* @brief Function implementing the temperature thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartTask03 */
+void StartTask03(void *argument)
+{
+  /* USER CODE BEGIN StartTask03 */
+	//TickType_t xLastWakeTime;
+	//const TickType_t xDelay250ms = pdMS_TO_TICKS( 250 );
+	//xLastWakeTime = xTaskGetTickCount();
+  /* Infinite loop */
+	 for(;;)
+	  {
+		  temp_value = BSP_TSENSOR_ReadTemp();
+		  int tmpInt1 = temp_value;
+		  float tmpFrac = temp_value - tmpInt1;
+		  int tmpInt2 = trunc(tmpFrac * 100);
+		  snprintf(str_tmp,100," TEMPERATURE = %d.%02d\n\r", tmpInt1, tmpInt2);
+		  HAL_UART_Transmit(&huart1,( uint8_t * )str_tmp,sizeof(str_tmp),1000);
+		  //xEventGroupSetBits(xEventBits, TASK_1_BIT);
+		  osDelay(250);
+		  //vTaskResume(StartTask03);
+
+		  //osDelay(1);
+		  /* Set bit 1 in the event group to note this task has reached the
+		        synchronisation point.  The other two tasks will set the other two
+		        bits defined by ALL_SYNC_BITS.  All three tasks have reached the
+		        synchronisation point when all the ALL_SYNC_BITS are set.  Wait
+		        indefinitely for this to happen. */
+		        //xEventGroupSync( xEventBits, TASK_1_BIT, ALL_SYNC_BITS, portMAX_DELAY );
+
+		        /* xEventGroupSync() was called with an indefinite block time, so
+		        this task will only reach here if the synchronisation was made by all
+		        three tasks, so there is no need to test the return value. */
+	  }
+	 //vTaskDelete(NULL);
+  /* USER CODE END StartTask03 */
+}
+
+/* USER CODE BEGIN Header_StartTask04 */
+/**
+* @brief Function implementing the pressure thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartTask04 */
+void StartTask04(void *argument)
+{
+  /* USER CODE BEGIN StartTask04 */
+	//const TickType_t xDelay250ms = pdMS_TO_TICKS( 250 );
+  /* Infinite loop */
+	//TickType_t xLastWakeTime;
+	//xLastWakeTime = xTaskGetTickCount();
+  for(;;)
+  {
+	snprintf(str_tmp,100,"TASK 4 NUOVO EVVAI");
+	HAL_UART_Transmit(&huart1,( uint8_t * )str_tmp,sizeof(str_tmp),1000);
+	osDelay(250);
+	//osStatus osThreadResumeAll();
+	  //vTaskResume(StartTask04);
+  }
+  /* USER CODE END StartTask04 */
 }
 
 /**
