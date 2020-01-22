@@ -27,6 +27,7 @@
 #include "stm32l475e_iot01.h"
 #include "stm32l475e_iot01_hsensor.h"
 #include "stm32l475e_iot01_tsensor.h"
+#include "stm32l475e_iot01_psensor.h"
 #include <math.h>
 #include <stdio.h>
 //#include "event_groups.h"
@@ -72,17 +73,25 @@ osThreadId_t defaultTaskHandle;
 osThreadId_t humidityHandle;
 osThreadId_t temperatureHandle;
 osThreadId_t pressureHandle;
+osThreadId_t heatindexHandle;
 /* USER CODE BEGIN PV */
 float hum_value = 0; // Measured humidity value
 float temp_value = 0; // Measured temperature value
+float pres_value = 0; // Measured pressure value
+double heatIndex = 0; // Measured heat index value
 char str_tmp[100] = ""; // Formatted message to display the temperature v
 char str_hum[100] = ""; // Formatted message to display the humidity h
+char str_pres[100] = ""; // Formatted message to display the pressure p
+char str_hi[100] = ""; // Formatted message to display the heat index hi
 uint8_t msg1[] = "****** Humidity values measurement ******\n\n\r";
 uint8_t msg2[] = "=====> Initialize Humidity sensor HTS221 \r\n";
 uint8_t msg3[] = "=====> Humidity sensor HTS221 initialized \r\n ";
 uint8_t msg4[] = "****** Temperature values measurement ******\n\n\r";
 uint8_t msg5[] = "=====> Initialize Temperature sensor HTS221 \r\n";
 uint8_t msg6[] = "=====> Temperature sensor HTS221 initialized \r\n ";
+uint8_t msg7[] = "****** Pressure values measurement ******\n\n\r";
+uint8_t msg8[] = "=====> Initialize Pressure sensor HTS221 \r\n";
+uint8_t msg9[] = "=====> Pressure sensor HTS221 initialized \r\n ";
 //EventGroupHandle_t xEventBits;
 const uint32_t TASK_0_BIT = (1 << 0);
 const uint32_t TASK_1_BIT = (1 << 1);
@@ -104,6 +113,7 @@ void StartDefaultTask(void *argument);
 void StartTask02(void *argument);
 void StartTask03(void *argument);
 void StartTask04(void *argument);
+void StartTask05(void *argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -159,6 +169,10 @@ int main(void)
   HAL_UART_Transmit(&huart1,msg5,sizeof(msg5),1000);
    BSP_TSENSOR_Init();
   HAL_UART_Transmit(&huart1,msg6,sizeof(msg6),1000);
+  HAL_UART_Transmit(&huart1,msg7,sizeof(msg7),1000);
+  HAL_UART_Transmit(&huart1,msg8,sizeof(msg8),1000);
+   BSP_PSENSOR_Init();
+  HAL_UART_Transmit(&huart1,msg9,sizeof(msg9),1000);
 
    /*CODICE EVENT GROUP*/
 
@@ -225,7 +239,7 @@ int main(void)
   /* definition and creation of temperature */
   const osThreadAttr_t temperature_attributes = {
     .name = "temperature",
-    .priority = (osPriority_t) osPriorityLow2,
+    .priority = (osPriority_t) osPriorityLow3,
     .stack_size = 128
   };
   temperatureHandle = osThreadNew(StartTask03, NULL, &temperature_attributes);
@@ -233,10 +247,18 @@ int main(void)
   /* definition and creation of pressure */
   const osThreadAttr_t pressure_attributes = {
     .name = "pressure",
-    .priority = (osPriority_t) osPriorityLow1,
+    .priority = (osPriority_t) osPriorityLow2,
     .stack_size = 128
   };
   pressureHandle = osThreadNew(StartTask04, NULL, &pressure_attributes);
+
+  /* definition and creation of heatindex */
+  const osThreadAttr_t heatindex_attributes = {
+    .name = "heatindex",
+    .priority = (osPriority_t) osPriorityLow1,
+    .stack_size = 128
+  };
+  heatindexHandle = osThreadNew(StartTask05, NULL, &heatindex_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -937,13 +959,43 @@ void StartTask04(void *argument)
 	//xLastWakeTime = xTaskGetTickCount();
   for(;;)
   {
-	snprintf(str_tmp,100,"TASK 4 NUOVO EVVAI");
-	HAL_UART_Transmit(&huart1,( uint8_t * )str_tmp,sizeof(str_tmp),1000);
+	  pres_value = BSP_PSENSOR_ReadPressure();
+	  int tmpInt1 = pres_value;
+	  float tmpFrac = pres_value - tmpInt1;
+	  int tmpInt2 = trunc(tmpFrac * 100);
+	  snprintf(str_pres,100," Pressure = %d.%02d\n\r", tmpInt1, tmpInt2);
+	  HAL_UART_Transmit(&huart1,( uint8_t * )str_pres,sizeof(str_pres),1000);
 	osDelay(250);
 	//osStatus osThreadResumeAll();
 	  //vTaskResume(StartTask04);
   }
   /* USER CODE END StartTask04 */
+}
+
+/* USER CODE BEGIN Header_StartTask05 */
+/**
+* @brief Function implementing the heatindex thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartTask05 */
+void StartTask05(void *argument)
+{
+  /* USER CODE BEGIN StartTask05 */
+  /* Infinite loop */
+  for(;;)
+  {
+	  temp_value = (temp_value * (1.8)) + 32;
+	  double heatIndex = -42.379 + (2.04901523 * temp_value) + (10.14333127 * hum_value) + (-.22475541 * temp_value*hum_value) + (-0.00683783 * (temp_value*temp_value)) + (-0.05481717 * (hum_value * hum_value)) + (0.00122874 * (temp_value * temp_value) * hum_value) + (0.00085282 * temp_value * (hum_value * hum_value)) + (-0.00000199 * (temp_value * temp_value) * (hum_value * hum_value));
+	  heatIndex = (heatIndex - 32) * 0.55;
+	  int tmpInt1 = heatIndex;
+	  float tmpFrac = heatIndex - tmpInt1;
+	  int tmpInt2 = trunc(tmpFrac * 100);
+	  snprintf(str_hi,100," Heat Index = %d.%02d\n\r", tmpInt1, tmpInt2); // @suppress("Float formatting support")
+	  HAL_UART_Transmit(&huart1,( uint8_t * )str_hi,sizeof(str_hi),1000);
+    osDelay(250);
+  }
+  /* USER CODE END StartTask05 */
 }
 
 /**
