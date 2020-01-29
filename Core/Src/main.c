@@ -72,32 +72,41 @@ osThreadId_t temperatureHandle;
 const osThreadAttr_t temperature_attributes = {
   .name = "temperature",
   .priority = (osPriority_t) osPriorityLow1,
-  .stack_size = 512
+  .stack_size = 400
 };
 /* Definitions for pressure */
 osThreadId_t pressureHandle;
 const osThreadAttr_t pressure_attributes = {
   .name = "pressure",
-  .priority = (osPriority_t) osPriorityLow,
-  .stack_size = 512
+  .priority = (osPriority_t) osPriorityLow2,
+  .stack_size = 400
 };
 /* Definitions for humidity */
 osThreadId_t humidityHandle;
 const osThreadAttr_t humidity_attributes = {
   .name = "humidity",
   .priority = (osPriority_t) osPriorityLow3,
+  .stack_size = 400
+};
+/* Definitions for HeatIndex */
+osThreadId_t HeatIndexHandle;
+const osThreadAttr_t HeatIndex_attributes = {
+  .name = "HeatIndex",
+  .priority = (osPriority_t) osPriorityLow,
   .stack_size = 512
 };
 /* USER CODE BEGIN PV */
-char str_tmp[100] = "";
-char str_tmp1[100] = "";
-char str_tmp2[100] = "";
-char str_tmp3[100] = "";
+char str_tmp[30] = "";
+char str_tmp1[30] = "";
+char str_tmp2[30] = "";
+char str_tmp3[30] = "";
+char str_hi[30] = "";
 float temp_value = 0;
 float pres_value = 0;
 float hum_value = 0;
- //int tmpInt1 = 0;
-// float tmpFrac = 0;
+float heatIndex = 0;
+ int tmpInt1 = 0;
+ float tmpFrac = 0;
  int tmpInt2 = 0;
 /* USER CODE END PV */
 
@@ -115,6 +124,7 @@ void StartDefaultTask(void *argument);
 void StartTemp(void *argument);
 void StartTPres(void *argument);
 void StartHumidity(void *argument);
+void StartIndex(void *argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -197,6 +207,9 @@ int main(void)
 
   /* creation of humidity */
   humidityHandle = osThreadNew(StartHumidity, NULL, &humidity_attributes);
+
+  /* creation of HeatIndex */
+  HeatIndexHandle = osThreadNew(StartIndex, NULL, &HeatIndex_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -780,12 +793,12 @@ void StartTemp(void *argument)
   for(;;)
   {
 	  temp_value = BSP_TSENSOR_ReadTemp();
-	  //tmpInt1 = temp_value;
-	  //tmpFrac = temp_value - tmpInt1;
-	  //tmpInt2 = trunc(tmpFrac * 100);
-	  tmpInt2 = trunc(temp_value);
-	 // snprintf(str_tmp1,100," TEMPERATURE = %d.%02d C\r\n", tmpInt1, tmpInt2);
-	  snprintf(str_tmp1,100," TEMPERATURE = %d C\r\n", tmpInt2);
+	  tmpInt1 = temp_value;
+	  tmpFrac = temp_value - tmpInt1;
+	  tmpInt2 = trunc(tmpFrac * 100);
+	  //tmpInt2 = trunc(temp_value);
+	  snprintf(str_tmp1,30," TEMPERATURE = %d.%02d \xB0""C\r\n", tmpInt1, tmpInt2);
+	 // snprintf(str_tmp1,30," TEMPERATURE = %d C\r\n", tmpInt2);
 	  HAL_UART_Transmit(&huart1,( uint8_t * )str_tmp1,sizeof(str_tmp1),1000);
 	  osDelay(6000);
   }
@@ -806,9 +819,13 @@ void StartTPres(void *argument)
   for(;;)
   {
 	  pres_value = BSP_PSENSOR_ReadPressure();
-	  tmpInt2 = trunc(pres_value);
-	  //snprintf(str_tmp2,100," PRESSURE = %d.%02d hPa\r\n", tmpInt1, tmpInt2);
-	  snprintf(str_tmp2,100," PRESSURE = %d hPa \r\n", tmpInt2);
+	  tmpInt1 = pres_value;
+	  tmpFrac = pres_value - tmpInt1;
+	  //tmpInt2 = trunc(heatIndex);
+	  tmpInt2 = trunc(tmpFrac * 100);
+	  //tmpInt2 = trunc(pres_value);
+	  snprintf(str_tmp2,30," PRESSURE = %d.%02d hPa\r\n", tmpInt1, tmpInt2);
+	  //snprintf(str_tmp2,30," PRESSURE = %d hPa \r\n", tmpInt2);
 	  HAL_UART_Transmit(&huart1,( uint8_t * )str_tmp2,sizeof(str_tmp2),1000);
 	  osDelay(9000);
   }
@@ -829,13 +846,44 @@ void StartHumidity(void *argument)
   for(;;)
   {
 	  hum_value = BSP_HSENSOR_ReadHumidity();
-	  tmpInt2 = trunc(hum_value);
-	  //snprintf(str_tmp2,100," PRESSURE = %d.%02d hPa\r\n", tmpInt1, tmpInt2);
-	  snprintf(str_tmp3,100," HUMIDITY = %d percent \r\n", tmpInt2);
+	  tmpInt1 = hum_value;
+	  tmpFrac = hum_value - tmpInt1;
+	  tmpInt2 = trunc(tmpFrac * 100);
+	  //tmpInt2 = trunc(hum_value);
+	  snprintf(str_tmp3,30," HUMIDITY = %d.%02d %%\r\n", tmpInt1, tmpInt2);
+	  //snprintf(str_tmp3,30," HUMIDITY = %d percent \r\n", tmpInt2);
 	  HAL_UART_Transmit(&huart1,( uint8_t * )str_tmp3,sizeof(str_tmp3),1000);
 	  osDelay(12000);
   }
   /* USER CODE END StartHumidity */
+}
+
+/* USER CODE BEGIN Header_StartIndex */
+/**
+* @brief Function implementing the HeatIndex thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartIndex */
+void StartIndex(void *argument)
+{
+  /* USER CODE BEGIN StartIndex */
+  /* Infinite loop */
+  for(;;)
+  {
+	  temp_value = (temp_value * (1.8)) + 32;
+	  heatIndex = -42.379 + (2.04901523 * temp_value) + (10.14333127 * hum_value) + (-.22475541 * temp_value*hum_value) + (-0.00683783 * (temp_value*temp_value)) + (-0.05481717 * (hum_value * hum_value)) + (0.00122874 * (temp_value * temp_value) * hum_value) + (0.00085282 * temp_value * (hum_value * hum_value)) + (-0.00000199 * (temp_value * temp_value) * (hum_value * hum_value));
+	  heatIndex = (heatIndex - 32) * 0.55;
+	  tmpInt1 = heatIndex;
+	  tmpFrac = heatIndex - tmpInt1;
+	  //tmpInt2 = trunc(heatIndex);
+	  tmpInt2 = trunc(tmpFrac * 100);
+	  snprintf(str_hi,30," Heat Index = %d.%02d\r\n", tmpInt1, tmpInt2);
+	  //snprintf(str_hi,30," Heat Index = %d\n\r", tmpInt2); // @suppress("Float formatting support")
+	  HAL_UART_Transmit(&huart1,( uint8_t * )str_hi,sizeof(str_hi),1000);
+	  osDelay(15000);
+  }
+  /* USER CODE END StartIndex */
 }
 
 /**

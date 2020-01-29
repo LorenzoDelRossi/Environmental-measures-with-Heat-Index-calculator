@@ -2,7 +2,7 @@
 FREERTOS.FootprintOK=true
 FREERTOS.HEAP_NUMBER=4
 FREERTOS.IPParameters=Tasks01,FootprintOK,configTOTAL_HEAP_SIZE,configUSE_IDLE_HOOK,HEAP_NUMBER
-FREERTOS.Tasks01=defaultTask,24,128,StartDefaultTask,Default,NULL,Dynamic,NULL,NULL;temperature,9,512,StartTemp,Default,NULL,Dynamic,NULL,NULL;pressure,8,512,StartTPres,Default,NULL,Dynamic,NULL,NULL;humidity,11,512,StartHumidity,Default,NULL,Dynamic,NULL,NULL
+FREERTOS.Tasks01=defaultTask,24,128,StartDefaultTask,Default,NULL,Dynamic,NULL,NULL;temperature,9,400,StartTemp,Default,NULL,Dynamic,NULL,NULL;pressure,10,400,StartTPres,Default,NULL,Dynamic,NULL,NULL;humidity,11,400,StartHumidity,Default,NULL,Dynamic,NULL,NULL;HeatIndex,8,512,StartIndex,Default,NULL,Dynamic,NULL,NULL
 FREERTOS.configTOTAL_HEAP_SIZE=9000
 FREERTOS.configUSE_IDLE_HOOK=0
 File.Version=6
