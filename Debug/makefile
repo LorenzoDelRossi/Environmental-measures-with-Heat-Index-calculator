@@ -13,6 +13,7 @@ RM := rm -rf
 -include Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/subdir.mk
 -include Middlewares/Third_Party/FreeRTOS/Source/subdir.mk
 -include Drivers/STM32L4xx_HAL_Driver/Src/subdir.mk
+-include Drivers/BSP/Components/lps22hb/subdir.mk
 -include Drivers/BSP/Components/hts221/subdir.mk
 -include Drivers/BSP/B-L475E-IOT01/subdir.mk
 -include Core/Startup/subdir.mk
@@ -30,21 +31,24 @@ endif
 
 # Add inputs and outputs from these tool invocations to the build variables 
 EXECUTABLES += \
-humidity.elf \
+TermoPres.elf \
 
 SIZE_OUTPUT += \
 default.size.stdout \
 
 OBJDUMP_LIST += \
-humidity.list \
+TermoPres.list \
+
+OBJCOPY_BIN += \
+TermoPres.bin \
 
 
 # All Target
-all: humidity.elf secondary-outputs
+all: TermoPres.elf secondary-outputs
 
 # Tool invocations
-humidity.elf: $(OBJS) $(USER_OBJS) C:\Users\user\STM32CubeIDE\workspace_1.1.0\humidity\STM32L475VGTX_FLASH.ld
-	arm-none-eabi-gcc -o "humidity.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\Users\user\STM32CubeIDE\workspace_1.1.0\humidity\STM32L475VGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="humidity.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+TermoPres.elf: $(OBJS) $(USER_OBJS) C:\Users\edd95\STM32CubeIDE\workspace_1.1.0\TermoPres\STM32L475VGTX_FLASH.ld
+	arm-none-eabi-gcc -o "TermoPres.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\Users\edd95\STM32CubeIDE\workspace_1.1.0\TermoPres\STM32L475VGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="TermoPres.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
@@ -53,8 +57,13 @@ default.size.stdout: $(EXECUTABLES)
 	@echo 'Finished building: $@'
 	@echo ' '
 
-humidity.list: $(EXECUTABLES)
-	arm-none-eabi-objdump -h -S $(EXECUTABLES) > "humidity.list"
+TermoPres.list: $(EXECUTABLES)
+	arm-none-eabi-objdump -h -S $(EXECUTABLES) > "TermoPres.list"
+	@echo 'Finished building: $@'
+	@echo ' '
+
+TermoPres.bin: $(EXECUTABLES)
+	arm-none-eabi-objcopy  -O binary $(EXECUTABLES) "TermoPres.bin"
 	@echo 'Finished building: $@'
 	@echo ' '
 
@@ -63,7 +72,7 @@ clean:
 	-$(RM) *
 	-@echo ' '
 
-secondary-outputs: $(SIZE_OUTPUT) $(OBJDUMP_LIST)
+secondary-outputs: $(SIZE_OUTPUT) $(OBJDUMP_LIST) $(OBJCOPY_BIN)
 
 .PHONY: all clean dependents
 .SECONDARY:

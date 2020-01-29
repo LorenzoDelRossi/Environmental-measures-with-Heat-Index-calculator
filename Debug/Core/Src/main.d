@@ -39,7 +39,6 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
  ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_ll_usb.h \
  ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_pcd_ex.h \
  ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os.h \
- ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.h \
  ../Middlewares/Third_Party/FreeRTOS/Source/include/FreeRTOS.h \
  ../Core/Inc/FreeRTOSConfig.h \
  ../Middlewares/Third_Party/FreeRTOS/Source/include/projdefs.h \
@@ -47,12 +46,20 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
  ../Middlewares/Third_Party/FreeRTOS/Source/include/deprecated_definitions.h \
  ../Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F/portmacro.h \
  ../Middlewares/Third_Party/FreeRTOS/Source/include/mpu_wrappers.h \
- C:/Users/user/STM32CubeIDE/workspace_1.1.0/humidity/Drivers/BSP/B-L475E-IOT01/stm32l475e_iot01.h \
- C:/Users/user/STM32CubeIDE/workspace_1.1.0/humidity/Drivers/BSP/B-L475E-IOT01/stm32l475e_iot01_hsensor.h \
- C:/Users/user/STM32CubeIDE/workspace_1.1.0/humidity/Drivers/BSP/B-L475E-IOT01/stm32l475e_iot01.h \
- c:\users\user\stm32cubeide\workspace_1.1.0\humidity\drivers\bsp\components\hts221\hts221.h \
- c:\users\user\stm32cubeide\workspace_1.1.0\humidity\drivers\bsp\components\common\hsensor.h \
- c:\users\user\stm32cubeide\workspace_1.1.0\humidity\drivers\bsp\components\common\tsensor.h
+ ../Middlewares/Third_Party/FreeRTOS/Source/include/task.h \
+ ../Middlewares/Third_Party/FreeRTOS/Source/include/list.h \
+ ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.h \
+ C:/Users/edd95/STM32CubeIDE/workspace_1.1.0/TermoPres/Drivers/BSP/B-L475E-IOT01/stm32l475e_iot01.h \
+ C:/Users/edd95/STM32CubeIDE/workspace_1.1.0/TermoPres/Drivers/BSP/B-L475E-IOT01/stm32l475e_iot01_tsensor.h \
+ C:/Users/edd95/STM32CubeIDE/workspace_1.1.0/TermoPres/Drivers/BSP/B-L475E-IOT01/stm32l475e_iot01.h \
+ c:\users\edd95\stm32cubeide\workspace_1.1.0\termopres\drivers\bsp\components\hts221\hts221.h \
+ c:\users\edd95\stm32cubeide\workspace_1.1.0\termopres\drivers\bsp\components\common\hsensor.h \
+ c:\users\edd95\stm32cubeide\workspace_1.1.0\termopres\drivers\bsp\components\common\tsensor.h \
+ C:/Users/edd95/STM32CubeIDE/workspace_1.1.0/TermoPres/Drivers/BSP/B-L475E-IOT01/stm32l475e_iot01_psensor.h \
+ c:\users\edd95\stm32cubeide\workspace_1.1.0\termopres\drivers\bsp\components\lps22hb\lps22hb.h \
+ c:\users\edd95\stm32cubeide\workspace_1.1.0\termopres\drivers\bsp\components\common\psensor.h \
+ c:\users\edd95\stm32cubeide\workspace_1.1.0\termopres\drivers\bsp\components\common\tsensor.h \
+ C:/Users/edd95/STM32CubeIDE/workspace_1.1.0/TermoPres/Drivers/BSP/B-L475E-IOT01/stm32l475e_iot01_hsensor.h
 
 ../Core/Inc/main.h:
 
@@ -136,8 +143,6 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
 
 ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os.h:
 
-../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.h:
-
 ../Middlewares/Third_Party/FreeRTOS/Source/include/FreeRTOS.h:
 
 ../Core/Inc/FreeRTOSConfig.h:
@@ -152,14 +157,30 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
 
 ../Middlewares/Third_Party/FreeRTOS/Source/include/mpu_wrappers.h:
 
-C:/Users/user/STM32CubeIDE/workspace_1.1.0/humidity/Drivers/BSP/B-L475E-IOT01/stm32l475e_iot01.h:
+../Middlewares/Third_Party/FreeRTOS/Source/include/task.h:
 
-C:/Users/user/STM32CubeIDE/workspace_1.1.0/humidity/Drivers/BSP/B-L475E-IOT01/stm32l475e_iot01_hsensor.h:
+../Middlewares/Third_Party/FreeRTOS/Source/include/list.h:
 
-C:/Users/user/STM32CubeIDE/workspace_1.1.0/humidity/Drivers/BSP/B-L475E-IOT01/stm32l475e_iot01.h:
+../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.h:
 
-c:\users\user\stm32cubeide\workspace_1.1.0\humidity\drivers\bsp\components\hts221\hts221.h:
+C:/Users/edd95/STM32CubeIDE/workspace_1.1.0/TermoPres/Drivers/BSP/B-L475E-IOT01/stm32l475e_iot01.h:
 
-c:\users\user\stm32cubeide\workspace_1.1.0\humidity\drivers\bsp\components\common\hsensor.h:
+C:/Users/edd95/STM32CubeIDE/workspace_1.1.0/TermoPres/Drivers/BSP/B-L475E-IOT01/stm32l475e_iot01_tsensor.h:
 
-c:\users\user\stm32cubeide\workspace_1.1.0\humidity\drivers\bsp\components\common\tsensor.h:
+C:/Users/edd95/STM32CubeIDE/workspace_1.1.0/TermoPres/Drivers/BSP/B-L475E-IOT01/stm32l475e_iot01.h:
+
+c:\users\edd95\stm32cubeide\workspace_1.1.0\termopres\drivers\bsp\components\hts221\hts221.h:
+
+c:\users\edd95\stm32cubeide\workspace_1.1.0\termopres\drivers\bsp\components\common\hsensor.h:
+
+c:\users\edd95\stm32cubeide\workspace_1.1.0\termopres\drivers\bsp\components\common\tsensor.h:
+
+C:/Users/edd95/STM32CubeIDE/workspace_1.1.0/TermoPres/Drivers/BSP/B-L475E-IOT01/stm32l475e_iot01_psensor.h:
+
+c:\users\edd95\stm32cubeide\workspace_1.1.0\termopres\drivers\bsp\components\lps22hb\lps22hb.h:
+
+c:\users\edd95\stm32cubeide\workspace_1.1.0\termopres\drivers\bsp\components\common\psensor.h:
+
+c:\users\edd95\stm32cubeide\workspace_1.1.0\termopres\drivers\bsp\components\common\tsensor.h:
+
+C:/Users/edd95/STM32CubeIDE/workspace_1.1.0/TermoPres/Drivers/BSP/B-L475E-IOT01/stm32l475e_iot01_hsensor.h:

@@ -6,7 +6,7 @@
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; Copyright (c) 2019 STMicroelectronics.
+  * <h2><center>&copy; Copyright (c) 2020 STMicroelectronics.
   * All rights reserved.</center></h2>
   *
   * This software component is licensed by ST under BSD 3-Clause license,
@@ -25,14 +25,11 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "stm32l475e_iot01.h"
-#include "stm32l475e_iot01_hsensor.h"
 #include "stm32l475e_iot01_tsensor.h"
 #include "stm32l475e_iot01_psensor.h"
-#include <math.h>
+#include "stm32l475e_iot01_hsensor.h"
 #include <stdio.h>
-//#include "event_groups.h"
-//#include "FreeRTOS.h"
-
+#include <math.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -42,12 +39,6 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-/* Bits used by the three tasks. */
-//#define TASK_0_BIT        ( 1 << 0 )
-//#define TASK_1_BIT        ( 1 << 1 )
-/*#define TASK_2_BIT        ( 1 << 2 )*/
-
-//#define ALL_SYNC_BITS (TASK_0_BIT | TASK_1_BIT)
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -69,34 +60,45 @@ UART_HandleTypeDef huart3;
 
 PCD_HandleTypeDef hpcd_USB_OTG_FS;
 
+/* Definitions for defaultTask */
 osThreadId_t defaultTaskHandle;
-osThreadId_t humidityHandle;
+const osThreadAttr_t defaultTask_attributes = {
+  .name = "defaultTask",
+  .priority = (osPriority_t) osPriorityNormal,
+  .stack_size = 128
+};
+/* Definitions for temperature */
 osThreadId_t temperatureHandle;
+const osThreadAttr_t temperature_attributes = {
+  .name = "temperature",
+  .priority = (osPriority_t) osPriorityLow1,
+  .stack_size = 512
+};
+/* Definitions for pressure */
 osThreadId_t pressureHandle;
-osThreadId_t heatindexHandle;
+const osThreadAttr_t pressure_attributes = {
+  .name = "pressure",
+  .priority = (osPriority_t) osPriorityLow,
+  .stack_size = 512
+};
+/* Definitions for humidity */
+osThreadId_t humidityHandle;
+const osThreadAttr_t humidity_attributes = {
+  .name = "humidity",
+  .priority = (osPriority_t) osPriorityLow3,
+  .stack_size = 512
+};
 /* USER CODE BEGIN PV */
-float hum_value = 0; // Measured humidity value
-float temp_value = 0; // Measured temperature value
-float pres_value = 0; // Measured pressure value
-double heatIndex = 0; // Measured heat index value
-char str_tmp[100] = ""; // Formatted message to display the temperature v
-char str_hum[100] = ""; // Formatted message to display the humidity h
-char str_pres[100] = ""; // Formatted message to display the pressure p
-char str_hi[100] = ""; // Formatted message to display the heat index hi
-uint8_t msg1[] = "****** Humidity values measurement ******\n\n\r";
-uint8_t msg2[] = "=====> Initialize Humidity sensor HTS221 \r\n";
-uint8_t msg3[] = "=====> Humidity sensor HTS221 initialized \r\n ";
-uint8_t msg4[] = "****** Temperature values measurement ******\n\n\r";
-uint8_t msg5[] = "=====> Initialize Temperature sensor HTS221 \r\n";
-uint8_t msg6[] = "=====> Temperature sensor HTS221 initialized \r\n ";
-uint8_t msg7[] = "****** Pressure values measurement ******\n\n\r";
-uint8_t msg8[] = "=====> Initialize Pressure sensor HTS221 \r\n";
-uint8_t msg9[] = "=====> Pressure sensor HTS221 initialized \r\n ";
-//EventGroupHandle_t xEventBits;
-const uint32_t TASK_0_BIT = (1 << 0);
-const uint32_t TASK_1_BIT = (1 << 1);
-const uint32_t ALL_SYNC_BITS = (1 << 0 | 1 << 1);
-
+char str_tmp[100] = "";
+char str_tmp1[100] = "";
+char str_tmp2[100] = "";
+char str_tmp3[100] = "";
+float temp_value = 0;
+float pres_value = 0;
+float hum_value = 0;
+ //int tmpInt1 = 0;
+// float tmpFrac = 0;
+ int tmpInt2 = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -110,10 +112,9 @@ static void MX_USART1_UART_Init(void);
 static void MX_USART3_UART_Init(void);
 static void MX_USB_OTG_FS_PCD_Init(void);
 void StartDefaultTask(void *argument);
-void StartTask02(void *argument);
-void StartTask03(void *argument);
-void StartTask04(void *argument);
-void StartTask05(void *argument);
+void StartTemp(void *argument);
+void StartTPres(void *argument);
+void StartHumidity(void *argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -161,46 +162,11 @@ int main(void)
   MX_USART3_UART_Init();
   MX_USB_OTG_FS_PCD_Init();
   /* USER CODE BEGIN 2 */
-  HAL_UART_Transmit(&huart1,msg1,sizeof(msg1),1000);
-  HAL_UART_Transmit(&huart1,msg2,sizeof(msg2),1000);
+  BSP_TSENSOR_Init();
   BSP_HSENSOR_Init();
-  HAL_UART_Transmit(&huart1,msg3,sizeof(msg3),1000);
-  HAL_UART_Transmit(&huart1,msg4,sizeof(msg4),1000);
-  HAL_UART_Transmit(&huart1,msg5,sizeof(msg5),1000);
-   BSP_TSENSOR_Init();
-  HAL_UART_Transmit(&huart1,msg6,sizeof(msg6),1000);
-  HAL_UART_Transmit(&huart1,msg7,sizeof(msg7),1000);
-  HAL_UART_Transmit(&huart1,msg8,sizeof(msg8),1000);
-   BSP_PSENSOR_Init();
-  HAL_UART_Transmit(&huart1,msg9,sizeof(msg9),1000);
-
-   /*CODICE EVENT GROUP*/
-
-   /* Declare a variable to hold the created event group. */
-  	    //EventGroupHandle_t xCreatedEventGroup;
-
-  	    /* Attempt to create the event group. */
-  	    //xEventBits = xEventGroupCreate();
-
-  	    /* Was the event group created successfully? */
-  	   // if( xEventBits == NULL )
-  	    //{
-  	        /* The event group was not created because there was insufficient
-  	        FreeRTOS heap available. */
-  	    	//snprintf(str_tmp,100,"ERRORE, NON FUNZIONA");
-  	    	//HAL_UART_Transmit(&huart1,( uint8_t * )str_tmp,sizeof(str_tmp),1000);
-  	    //}
-  	    //else
-  	    //{
-  	        /* The event group was created. */
-  	    	//snprintf(str_tmp,100,"GIUSTO, FUNZIONA");
-  	    	//HAL_UART_Transmit(&huart1,( uint8_t * )str_tmp,sizeof(str_tmp),1000);
-  	    //}
-
-   /*FINE CODICE EVENT GROUP*/
-
+  BSP_PSENSOR_Init();
   /* USER CODE END 2 */
-
+  /* Init scheduler */
   osKernelInitialize();
 
   /* USER CODE BEGIN RTOS_MUTEX */
@@ -220,45 +186,17 @@ int main(void)
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
-  /* definition and creation of defaultTask */
-  const osThreadAttr_t defaultTask_attributes = {
-    .name = "defaultTask",
-    .priority = (osPriority_t) osPriorityNormal,
-    .stack_size = 128
-  };
+  /* creation of defaultTask */
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
-  /* definition and creation of humidity */
-  const osThreadAttr_t humidity_attributes = {
-    .name = "humidity",
-    .priority = (osPriority_t) osPriorityBelowNormal,
-    .stack_size = 128
-  };
-  humidityHandle = osThreadNew(StartTask02, NULL, &humidity_attributes);
+  /* creation of temperature */
+  temperatureHandle = osThreadNew(StartTemp, NULL, &temperature_attributes);
 
-  /* definition and creation of temperature */
-  const osThreadAttr_t temperature_attributes = {
-    .name = "temperature",
-    .priority = (osPriority_t) osPriorityLow3,
-    .stack_size = 128
-  };
-  temperatureHandle = osThreadNew(StartTask03, NULL, &temperature_attributes);
+  /* creation of pressure */
+  pressureHandle = osThreadNew(StartTPres, NULL, &pressure_attributes);
 
-  /* definition and creation of pressure */
-  const osThreadAttr_t pressure_attributes = {
-    .name = "pressure",
-    .priority = (osPriority_t) osPriorityLow2,
-    .stack_size = 128
-  };
-  pressureHandle = osThreadNew(StartTask04, NULL, &pressure_attributes);
-
-  /* definition and creation of heatindex */
-  const osThreadAttr_t heatindex_attributes = {
-    .name = "heatindex",
-    .priority = (osPriority_t) osPriorityLow1,
-    .stack_size = 128
-  };
-  heatindexHandle = osThreadNew(StartTask05, NULL, &heatindex_attributes);
+  /* creation of humidity */
+  humidityHandle = osThreadNew(StartHumidity, NULL, &humidity_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -266,7 +204,7 @@ int main(void)
 
   /* Start scheduler */
   osKernelStart();
-  
+ 
   /* We should never get here as control is now taken by the scheduler */
 
   /* Infinite loop */
@@ -818,184 +756,86 @@ static void MX_GPIO_Init(void)
 void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN 5 */
-	//TickType_t xLastWakeTime;
-	//xLastWakeTime = xTaskGetTickCount();
-	//const TickType_t xDelay250ms = pdMS_TO_TICKS( 250 );
   /* Infinite loop */
   for(;;)
   {
-    //osDelay(1);
-
-	  snprintf(str_tmp,100,"ciao, sono il main\r\n");
-	  HAL_UART_Transmit(&huart1,( uint8_t * )str_tmp,sizeof(str_tmp),1000);
-
-	  //vTaskDelay(xDelay250ms);
-	  //vTaskResume(StartDefaultTask);
-	  osDelay(250);
-	//uint32_t result = xEventGroupWaitBits(xEventBits, ALL_SYNC_BITS,
-														//pdTRUE,
-														//pdTRUE,
-														//3000);
-	//if (result == ALL_SYNC_BITS) {
-		//puts("va tutto bene");
-	//}
-	//else {
-		//if(!(result & TASK_0_BIT)) {
-			//puts("il task 2 ha smesso di rispondere");
-		//}
-		//if(!(result & TASK_1_BIT)) {
-			//puts("il task 3 ha smesso di rispondere");
-		//}
-	//}
+		/*snprintf(str_tmp,100,"Stampa task default \r\n");
+		HAL_UART_Transmit(&huart1,( uint8_t * )str_tmp,sizeof(str_tmp),1000);*/
+	    osDelay(1); //3000
   }
   /* USER CODE END 5 */ 
 }
 
-/* USER CODE BEGIN Header_StartTask02 */
+/* USER CODE BEGIN Header_StartTemp */
+/**
+* @brief Function implementing the temperatura thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartTemp */
+void StartTemp(void *argument)
+{
+  /* USER CODE BEGIN StartTemp */
+  /* Infinite loop */
+  for(;;)
+  {
+	  temp_value = BSP_TSENSOR_ReadTemp();
+	  //tmpInt1 = temp_value;
+	  //tmpFrac = temp_value - tmpInt1;
+	  //tmpInt2 = trunc(tmpFrac * 100);
+	  tmpInt2 = trunc(temp_value);
+	 // snprintf(str_tmp1,100," TEMPERATURE = %d.%02d C\r\n", tmpInt1, tmpInt2);
+	  snprintf(str_tmp1,100," TEMPERATURE = %d C\r\n", tmpInt2);
+	  HAL_UART_Transmit(&huart1,( uint8_t * )str_tmp1,sizeof(str_tmp1),1000);
+	  osDelay(6000);
+  }
+  /* USER CODE END StartTemp */
+}
+
+/* USER CODE BEGIN Header_StartTPres */
+/**
+* @brief Function implementing the pressione thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartTPres */
+void StartTPres(void *argument)
+{
+  /* USER CODE BEGIN StartTPres */
+  /* Infinite loop */
+  for(;;)
+  {
+	  pres_value = BSP_PSENSOR_ReadPressure();
+	  tmpInt2 = trunc(pres_value);
+	  //snprintf(str_tmp2,100," PRESSURE = %d.%02d hPa\r\n", tmpInt1, tmpInt2);
+	  snprintf(str_tmp2,100," PRESSURE = %d hPa \r\n", tmpInt2);
+	  HAL_UART_Transmit(&huart1,( uint8_t * )str_tmp2,sizeof(str_tmp2),1000);
+	  osDelay(9000);
+  }
+  /* USER CODE END StartTPres */
+}
+
+/* USER CODE BEGIN Header_StartHumidity */
 /**
 * @brief Function implementing the humidity thread.
 * @param argument: Not used
 * @retval None
 */
-/* USER CODE END Header_StartTask02 */
-void StartTask02(void *argument)
+/* USER CODE END Header_StartHumidity */
+void StartHumidity(void *argument)
 {
-  /* USER CODE BEGIN StartTask02 */
-	//EventBits_t uxReturn;
-	//TickType_t xTicksToWait = 1000 / portTICK_PERIOD_MS;
-	//TickType_t xLastWakeTime;
-	//xLastWakeTime = xTaskGetTickCount();
-	//const TickType_t xDelay250ms = pdMS_TO_TICKS( 250 );
+  /* USER CODE BEGIN StartHumidity */
   /* Infinite loop */
   for(;;)
   {
 	  hum_value = BSP_HSENSOR_ReadHumidity();
-	  int tmpInt1 = hum_value;
-	  float tmpFrac = hum_value - tmpInt1;
-	  int tmpInt2 = trunc(tmpFrac * 100);
-	  snprintf(str_hum,100," HUMIDITY = %d.%02d\n\r", tmpInt1, tmpInt2);
-	  HAL_UART_Transmit(&huart1,( uint8_t * )str_hum,sizeof(str_hum),1000);
-	  //xEventGroupSetBits(xEventBits, TASK_0_BIT);
-	 // vTaskDelay(xDelay250ms);
-	  //vTaskResume(StartTask02);
-
-	  osDelay(250);
-
-      /* Set bit 0 in the event group to note this task has reached the
-      sync point.  The other two tasks will set the other two bits defined
-      by ALL_SYNC_BITS.  All three tasks have reached the synchronisation
-      point when all the ALL_SYNC_BITS are set.  Wait a maximum of 100ms
-      for this to happen. */
-      //uxReturn = xEventGroupSync( xEventBits,
-      //                            TASK_0_BIT,
-      //                            ALL_SYNC_BITS,
-      //                            xTicksToWait );
-
-      //if( ( uxReturn & ALL_SYNC_BITS ) == ALL_SYNC_BITS )
-      //{
-          /* All three tasks reached the synchronisation point before the call
-          to xEventGroupSync() timed out. */
-      //}
+	  tmpInt2 = trunc(hum_value);
+	  //snprintf(str_tmp2,100," PRESSURE = %d.%02d hPa\r\n", tmpInt1, tmpInt2);
+	  snprintf(str_tmp3,100," HUMIDITY = %d percent \r\n", tmpInt2);
+	  HAL_UART_Transmit(&huart1,( uint8_t * )str_tmp3,sizeof(str_tmp3),1000);
+	  osDelay(12000);
   }
-  //vTaskDelete(NULL);
-  /* USER CODE END StartTask02 */
-}
-
-/* USER CODE BEGIN Header_StartTask03 */
-/**
-* @brief Function implementing the temperature thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_StartTask03 */
-void StartTask03(void *argument)
-{
-  /* USER CODE BEGIN StartTask03 */
-	//TickType_t xLastWakeTime;
-	//const TickType_t xDelay250ms = pdMS_TO_TICKS( 250 );
-	//xLastWakeTime = xTaskGetTickCount();
-  /* Infinite loop */
-	 for(;;)
-	  {
-		  temp_value = BSP_TSENSOR_ReadTemp();
-		  int tmpInt1 = temp_value;
-		  float tmpFrac = temp_value - tmpInt1;
-		  int tmpInt2 = trunc(tmpFrac * 100);
-		  snprintf(str_tmp,100," TEMPERATURE = %d.%02d\n\r", tmpInt1, tmpInt2);
-		  HAL_UART_Transmit(&huart1,( uint8_t * )str_tmp,sizeof(str_tmp),1000);
-		  //xEventGroupSetBits(xEventBits, TASK_1_BIT);
-		  osDelay(250);
-		  //vTaskResume(StartTask03);
-
-		  //osDelay(1);
-		  /* Set bit 1 in the event group to note this task has reached the
-		        synchronisation point.  The other two tasks will set the other two
-		        bits defined by ALL_SYNC_BITS.  All three tasks have reached the
-		        synchronisation point when all the ALL_SYNC_BITS are set.  Wait
-		        indefinitely for this to happen. */
-		        //xEventGroupSync( xEventBits, TASK_1_BIT, ALL_SYNC_BITS, portMAX_DELAY );
-
-		        /* xEventGroupSync() was called with an indefinite block time, so
-		        this task will only reach here if the synchronisation was made by all
-		        three tasks, so there is no need to test the return value. */
-	  }
-	 //vTaskDelete(NULL);
-  /* USER CODE END StartTask03 */
-}
-
-/* USER CODE BEGIN Header_StartTask04 */
-/**
-* @brief Function implementing the pressure thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_StartTask04 */
-void StartTask04(void *argument)
-{
-  /* USER CODE BEGIN StartTask04 */
-	//const TickType_t xDelay250ms = pdMS_TO_TICKS( 250 );
-  /* Infinite loop */
-	//TickType_t xLastWakeTime;
-	//xLastWakeTime = xTaskGetTickCount();
-  for(;;)
-  {
-	  pres_value = BSP_PSENSOR_ReadPressure();
-	  int tmpInt1 = pres_value;
-	  float tmpFrac = pres_value - tmpInt1;
-	  int tmpInt2 = trunc(tmpFrac * 100);
-	  snprintf(str_pres,100," Pressure = %d.%02d\n\r", tmpInt1, tmpInt2);
-	  HAL_UART_Transmit(&huart1,( uint8_t * )str_pres,sizeof(str_pres),1000);
-	osDelay(250);
-	//osStatus osThreadResumeAll();
-	  //vTaskResume(StartTask04);
-  }
-  /* USER CODE END StartTask04 */
-}
-
-/* USER CODE BEGIN Header_StartTask05 */
-/**
-* @brief Function implementing the heatindex thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_StartTask05 */
-void StartTask05(void *argument)
-{
-  /* USER CODE BEGIN StartTask05 */
-  /* Infinite loop */
-  for(;;)
-  {
-	  temp_value = (temp_value * (1.8)) + 32;
-	  double heatIndex = -42.379 + (2.04901523 * temp_value) + (10.14333127 * hum_value) + (-.22475541 * temp_value*hum_value) + (-0.00683783 * (temp_value*temp_value)) + (-0.05481717 * (hum_value * hum_value)) + (0.00122874 * (temp_value * temp_value) * hum_value) + (0.00085282 * temp_value * (hum_value * hum_value)) + (-0.00000199 * (temp_value * temp_value) * (hum_value * hum_value));
-	  heatIndex = (heatIndex - 32) * 0.55;
-	  int tmpInt1 = heatIndex;
-	  float tmpFrac = heatIndex - tmpInt1;
-	  int tmpInt2 = trunc(tmpFrac * 100);
-	  snprintf(str_hi,100," Heat Index = %d.%02d\n\r", tmpInt1, tmpInt2); // @suppress("Float formatting support")
-	  HAL_UART_Transmit(&huart1,( uint8_t * )str_hi,sizeof(str_hi),1000);
-    osDelay(250);
-  }
-  /* USER CODE END StartTask05 */
+  /* USER CODE END StartHumidity */
 }
 
 /**
