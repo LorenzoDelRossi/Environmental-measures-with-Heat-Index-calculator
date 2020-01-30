@@ -60,12 +60,12 @@ UART_HandleTypeDef huart3;
 
 PCD_HandleTypeDef hpcd_USB_OTG_FS;
 
-/* Definitions for defaultTask */
-osThreadId_t defaultTaskHandle;
-const osThreadAttr_t defaultTask_attributes = {
-  .name = "defaultTask",
-  .priority = (osPriority_t) osPriorityNormal,
-  .stack_size = 550
+/* Definitions for PrintTask */
+osThreadId_t PrintTaskHandle;
+const osThreadAttr_t PrintTask_attributes = {
+  .name = "PrintTask",
+  .priority = (osPriority_t) osPriorityLow,
+  .stack_size = 512
 };
 /* Definitions for temperature */
 osThreadId_t temperatureHandle;
@@ -93,7 +93,7 @@ osThreadId_t HeatIndexHandle;
 const osThreadAttr_t HeatIndex_attributes = {
   .name = "HeatIndex",
   .priority = (osPriority_t) osPriorityLow,
-  .stack_size = 128
+  .stack_size = 550
 };
 /* Definitions for ButtonQueue */
 osMessageQueueId_t ButtonQueueHandle;
@@ -101,18 +101,28 @@ const osMessageQueueAttr_t ButtonQueue_attributes = {
   .name = "ButtonQueue"
 };
 /* USER CODE BEGIN PV */
-char str_tmp[30] = "";
-char str_tmp1[30] = "";
-char str_tmp2[30] = "";
-char str_tmp3[30] = "";
+//char str_tmp[30] = "";
+//char str_tmp1[30] = "";
+//char str_tmp2[30] = "";
+//char str_tmp3[30] = "";
+char str_stamp[100] = "";
 char str_hi[30] = "";
 float temp_value = 0;
 float pres_value = 0;
 float hum_value = 0;
 float heatIndex = 0;
-int tmpInt1 = 0;
-float tmpFrac = 0;
-int tmpInt2 = 0;
+int tmpInthum1 = 0;
+//float tmpFrachum = 0;
+int tmpInthum2 = 0;
+int tmpIntpres1 = 0;
+//float tmpFracpres = 0;
+int tmpIntpres2 = 0;
+int tmpInttemp1 = 0;
+float tmpFractemp = 0;
+int tmpInttemp2 = 0;
+int tmpInthi1 = 0;
+float tmpFrachi = 0;
+int tmpInthi2 = 0;
 uint8_t msg = 0;
 osStatus_t status;
 /* USER CODE END PV */
@@ -127,7 +137,7 @@ static void MX_SPI3_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_USART3_UART_Init(void);
 static void MX_USB_OTG_FS_PCD_Init(void);
-void StartDefaultTask(void *argument);
+void StartPrintTask(void *argument);
 void StartTemp(void *argument);
 void StartTPres(void *argument);
 void StartHumidity(void *argument);
@@ -207,8 +217,8 @@ int main(void)
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
-  /* creation of defaultTask */
-  defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
+  /* creation of PrintTask */
+  PrintTaskHandle = osThreadNew(StartPrintTask, NULL, &PrintTask_attributes);
 
   /* creation of temperature */
   temperatureHandle = osThreadNew(StartTemp, NULL, &temperature_attributes);
@@ -774,34 +784,24 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 }
 /* USER CODE END 4 */
 
-/* USER CODE BEGIN Header_StartDefaultTask */
+/* USER CODE BEGIN Header_StartPrintTask */
 /**
-  * @brief  Function implementing the defaultTask thread.
+  * @brief  Function implementing the PrintTask thread.
   * @param  argument: Not used 
   * @retval None
   */
-/* USER CODE END Header_StartDefaultTask */
-void StartDefaultTask(void *argument)
+/* USER CODE END Header_StartPrintTask */
+void StartPrintTask(void *argument)
 {
   /* USER CODE BEGIN 5 */
   /* Infinite loop */
   for(;;)
   {
-	  status = osMessageQueueGet(ButtonQueueHandle, &msg, NULL, osWaitForever);   // wait for message
-	      if (status == osOK) {
-	    	  temp_value = (temp_value * (1.8)) + 32;
-	    	  heatIndex = -42.379 + (2.04901523 * temp_value) + (10.14333127 * hum_value) + (-.22475541 * temp_value*hum_value) + (-0.00683783 * (temp_value*temp_value)) + (-0.05481717 * (hum_value * hum_value)) + (0.00122874 * (temp_value * temp_value) * hum_value) + (0.00085282 * temp_value * (hum_value * hum_value)) + (-0.00000199 * (temp_value * temp_value) * (hum_value * hum_value));
-	    	  heatIndex = (heatIndex - 32) * 0.55;
-	    	  tmpInt1 = heatIndex;
-	    	  tmpFrac = heatIndex - tmpInt1;
-	    	  tmpInt2 = trunc(tmpFrac * 100);
-	    	  snprintf(str_hi,30," Heat Index = %d.%02d\r\n", tmpInt1, tmpInt2);
-	    	  HAL_UART_Transmit(&huart1,( uint8_t * )str_hi,sizeof(str_hi),1000);
-	    	  HAL_GPIO_TogglePin(GPIOB, LED2_Pin);
-	      }
-	      	  osDelay(1000); //3000
+	  snprintf(str_stamp,100,"HUMIDITY = %d.%02d %%\r\nTEMPERATURE = %d.%02d \xB0""C\r\nPRESSURE = %d.%02d hPa\r\n\r\n", tmpInthum1, tmpInthum2, tmpInttemp1, tmpInttemp2, tmpIntpres1, tmpIntpres2);
+	  HAL_UART_Transmit(&huart1,( uint8_t * )str_stamp,sizeof(str_stamp),2000);
+	  osDelay(5000);
 
-	      }
+  }
   /* USER CODE END 5 */ 
 }
 
@@ -819,13 +819,11 @@ void StartTemp(void *argument)
   for(;;)
   {
 	  temp_value = BSP_TSENSOR_ReadTemp();
-	  tmpInt1 = temp_value;
-	  tmpFrac = temp_value - tmpInt1;
-	  tmpInt2 = trunc(tmpFrac * 100);
-	  //tmpInt2 = trunc(temp_value);
-	  snprintf(str_tmp1,30," TEMPERATURE = %d.%02d \xB0""C\r\n", tmpInt1, tmpInt2);
-	 // snprintf(str_tmp1,30," TEMPERATURE = %d C\r\n", tmpInt2);
-	  HAL_UART_Transmit(&huart1,( uint8_t * )str_tmp1,sizeof(str_tmp1),1000);
+	  tmpInttemp1 = temp_value;
+	  tmpFractemp = temp_value - tmpInttemp1;
+	  tmpInttemp2 = trunc(tmpFractemp * 100);
+	  //snprintf(str_tmp1,30,"TEMPERATURE = %d.%02d \xB0""C\r\n", tmpInttemp1, tmpInttemp2);
+	  //HAL_UART_Transmit(&huart1,( uint8_t * )str_tmp1,sizeof(str_tmp1),1000);
 	  osDelay(6000);
   }
   /* USER CODE END StartTemp */
@@ -845,14 +843,11 @@ void StartTPres(void *argument)
   for(;;)
   {
 	  pres_value = BSP_PSENSOR_ReadPressure();
-	  tmpInt1 = pres_value;
-	  tmpFrac = pres_value - tmpInt1;
-	  //tmpInt2 = trunc(heatIndex);
-	  tmpInt2 = trunc(tmpFrac * 100);
-	  //tmpInt2 = trunc(pres_value);
-	  snprintf(str_tmp2,30," PRESSURE = %d.%02d hPa\r\n", tmpInt1, tmpInt2);
-	  //snprintf(str_tmp2,30," PRESSURE = %d hPa \r\n", tmpInt2);
-	  HAL_UART_Transmit(&huart1,( uint8_t * )str_tmp2,sizeof(str_tmp2),1000);
+	  tmpIntpres1 = pres_value;
+	  tmpFractemp = pres_value - tmpIntpres1;
+	  tmpIntpres2 = trunc(tmpFractemp * 100);
+	  //snprintf(str_tmp2,30,"PRESSURE = %d.%02d hPa\r\n", tmpIntpres1, tmpIntpres2);
+	  //HAL_UART_Transmit(&huart1,( uint8_t * )str_tmp2,sizeof(str_tmp2),1000);
 	  osDelay(9000);
   }
   /* USER CODE END StartTPres */
@@ -872,13 +867,11 @@ void StartHumidity(void *argument)
   for(;;)
   {
 	  hum_value = BSP_HSENSOR_ReadHumidity();
-	  tmpInt1 = hum_value;
-	  tmpFrac = hum_value - tmpInt1;
-	  tmpInt2 = trunc(tmpFrac * 100);
-	  //tmpInt2 = trunc(hum_value);
-	  snprintf(str_tmp3,30," HUMIDITY = %d.%02d %%\r\n", tmpInt1, tmpInt2);
-	  //snprintf(str_tmp3,30," HUMIDITY = %d percent \r\n", tmpInt2);
-	  HAL_UART_Transmit(&huart1,( uint8_t * )str_tmp3,sizeof(str_tmp3),1000);
+	  tmpInthum1 = hum_value;
+	  tmpFractemp = hum_value - tmpInthum1;
+	  tmpInthum2 = trunc(tmpFractemp * 100);
+	 // snprintf(str_tmp3,30," HUMIDITY = %d.%02d %%\r\n", tmpInthum1, tmpInthum2);
+	  //HAL_UART_Transmit(&huart1,( uint8_t * )str_tmp3,sizeof(str_tmp3),1000);
 	  osDelay(12000);
   }
   /* USER CODE END StartHumidity */
@@ -897,18 +890,21 @@ void StartIndex(void *argument)
   /* Infinite loop */
   for(;;)
   {
-	  /*temp_value = (temp_value * (1.8)) + 32;
-	  heatIndex = -42.379 + (2.04901523 * temp_value) + (10.14333127 * hum_value) + (-.22475541 * temp_value*hum_value) + (-0.00683783 * (temp_value*temp_value)) + (-0.05481717 * (hum_value * hum_value)) + (0.00122874 * (temp_value * temp_value) * hum_value) + (0.00085282 * temp_value * (hum_value * hum_value)) + (-0.00000199 * (temp_value * temp_value) * (hum_value * hum_value));
-	  heatIndex = (heatIndex - 32) * 0.55;
-	  tmpInt1 = heatIndex;
-	  tmpFrac = heatIndex - tmpInt1;
-	  //tmpInt2 = trunc(heatIndex);
-	  tmpInt2 = trunc(tmpFrac * 100);
-	  snprintf(str_hi,30," Heat Index = %d.%02d\r\n", tmpInt1, tmpInt2);
-	  //snprintf(str_hi,30," Heat Index = %d\n\r", tmpInt2); // @suppress("Float formatting support")
-	  HAL_UART_Transmit(&huart1,( uint8_t * )str_hi,sizeof(str_hi),1000);
-	  osDelay(15000);*/
-	  osDelay(1);
+	  status = osMessageQueueGet(ButtonQueueHandle, &msg, NULL, osWaitForever);   // wait for message
+	      if (status == osOK) {
+	    	  //temp_value = (temp_value * (1.8)) + 32;
+	    	  tmpFrachi = (temp_value * (1.8)) + 32;
+	    	  //heatIndex = -42.379 + (2.04901523 * temp_value) + (10.14333127 * hum_value) + (-.22475541 * temp_value*hum_value) + (-0.00683783 * (temp_value*temp_value)) + (-0.05481717 * (hum_value * hum_value)) + (0.00122874 * (temp_value * temp_value) * hum_value) + (0.00085282 * temp_value * (hum_value * hum_value)) + (-0.00000199 * (temp_value * temp_value) * (hum_value * hum_value));
+	    	  heatIndex = -42.379 + (2.04901523 * tmpFrachi) + (10.14333127 * hum_value) + (-.22475541 * tmpFrachi*hum_value) + (-0.00683783 * (tmpFrachi*tmpFrachi)) + (-0.05481717 * (hum_value * hum_value)) + (0.00122874 * (tmpFrachi * tmpFrachi) * hum_value) + (0.00085282 * tmpFrachi * (hum_value * hum_value)) + (-0.00000199 * (tmpFrachi * tmpFrachi) * (hum_value * hum_value));
+	    	  heatIndex = (heatIndex - 32) * 0.55;
+	    	  tmpInthi1 = heatIndex;
+	    	  tmpFractemp = heatIndex - tmpInthi1;
+	    	  tmpInthi2 = trunc(tmpFractemp * 100);
+	    	  snprintf(str_hi,30,"Heat Index = %d.%02d\r\n\r\n", tmpInthi1, tmpInthi2);
+	    	  HAL_UART_Transmit(&huart1,( uint8_t * )str_hi,sizeof(str_hi),1000);
+	    	  HAL_GPIO_TogglePin(GPIOB, LED2_Pin);
+	      }
+	      	  osDelay(1000);
   }
   /* USER CODE END StartIndex */
 }
