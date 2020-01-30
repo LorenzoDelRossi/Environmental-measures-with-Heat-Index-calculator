@@ -65,7 +65,7 @@ osThreadId_t defaultTaskHandle;
 const osThreadAttr_t defaultTask_attributes = {
   .name = "defaultTask",
   .priority = (osPriority_t) osPriorityNormal,
-  .stack_size = 128
+  .stack_size = 550
 };
 /* Definitions for temperature */
 osThreadId_t temperatureHandle;
@@ -93,7 +93,12 @@ osThreadId_t HeatIndexHandle;
 const osThreadAttr_t HeatIndex_attributes = {
   .name = "HeatIndex",
   .priority = (osPriority_t) osPriorityLow,
-  .stack_size = 512
+  .stack_size = 128
+};
+/* Definitions for ButtonQueue */
+osMessageQueueId_t ButtonQueueHandle;
+const osMessageQueueAttr_t ButtonQueue_attributes = {
+  .name = "ButtonQueue"
 };
 /* USER CODE BEGIN PV */
 char str_tmp[30] = "";
@@ -105,9 +110,11 @@ float temp_value = 0;
 float pres_value = 0;
 float hum_value = 0;
 float heatIndex = 0;
- int tmpInt1 = 0;
- float tmpFrac = 0;
- int tmpInt2 = 0;
+int tmpInt1 = 0;
+float tmpFrac = 0;
+int tmpInt2 = 0;
+uint8_t msg = 0;
+osStatus_t status;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -190,6 +197,10 @@ int main(void)
   /* USER CODE BEGIN RTOS_TIMERS */
   /* start timers, add new ones, ... */
   /* USER CODE END RTOS_TIMERS */
+
+  /* Create the queue(s) */
+  /* creation of ButtonQueue */
+  ButtonQueueHandle = osMessageQueueNew (1, sizeof(uint8_t), &ButtonQueue_attributes);
 
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
@@ -756,7 +767,11 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+	if(GPIO_Pin == GPIO_PIN_13){ // If I just pressed the User Button
+	osMessageQueuePut(ButtonQueueHandle, &msg, 0U, 0U);}
+}
 /* USER CODE END 4 */
 
 /* USER CODE BEGIN Header_StartDefaultTask */
@@ -772,10 +787,21 @@ void StartDefaultTask(void *argument)
   /* Infinite loop */
   for(;;)
   {
-		/*snprintf(str_tmp,100,"Stampa task default \r\n");
-		HAL_UART_Transmit(&huart1,( uint8_t * )str_tmp,sizeof(str_tmp),1000);*/
-	    osDelay(1); //3000
-  }
+	  status = osMessageQueueGet(ButtonQueueHandle, &msg, NULL, osWaitForever);   // wait for message
+	      if (status == osOK) {
+	    	  temp_value = (temp_value * (1.8)) + 32;
+	    	  heatIndex = -42.379 + (2.04901523 * temp_value) + (10.14333127 * hum_value) + (-.22475541 * temp_value*hum_value) + (-0.00683783 * (temp_value*temp_value)) + (-0.05481717 * (hum_value * hum_value)) + (0.00122874 * (temp_value * temp_value) * hum_value) + (0.00085282 * temp_value * (hum_value * hum_value)) + (-0.00000199 * (temp_value * temp_value) * (hum_value * hum_value));
+	    	  heatIndex = (heatIndex - 32) * 0.55;
+	    	  tmpInt1 = heatIndex;
+	    	  tmpFrac = heatIndex - tmpInt1;
+	    	  tmpInt2 = trunc(tmpFrac * 100);
+	    	  snprintf(str_hi,30," Heat Index = %d.%02d\r\n", tmpInt1, tmpInt2);
+	    	  HAL_UART_Transmit(&huart1,( uint8_t * )str_hi,sizeof(str_hi),1000);
+	    	  HAL_GPIO_TogglePin(GPIOB, LED2_Pin);
+	      }
+	      	  osDelay(1000); //3000
+
+	      }
   /* USER CODE END 5 */ 
 }
 
@@ -871,7 +897,7 @@ void StartIndex(void *argument)
   /* Infinite loop */
   for(;;)
   {
-	  temp_value = (temp_value * (1.8)) + 32;
+	  /*temp_value = (temp_value * (1.8)) + 32;
 	  heatIndex = -42.379 + (2.04901523 * temp_value) + (10.14333127 * hum_value) + (-.22475541 * temp_value*hum_value) + (-0.00683783 * (temp_value*temp_value)) + (-0.05481717 * (hum_value * hum_value)) + (0.00122874 * (temp_value * temp_value) * hum_value) + (0.00085282 * temp_value * (hum_value * hum_value)) + (-0.00000199 * (temp_value * temp_value) * (hum_value * hum_value));
 	  heatIndex = (heatIndex - 32) * 0.55;
 	  tmpInt1 = heatIndex;
@@ -881,7 +907,8 @@ void StartIndex(void *argument)
 	  snprintf(str_hi,30," Heat Index = %d.%02d\r\n", tmpInt1, tmpInt2);
 	  //snprintf(str_hi,30," Heat Index = %d\n\r", tmpInt2); // @suppress("Float formatting support")
 	  HAL_UART_Transmit(&huart1,( uint8_t * )str_hi,sizeof(str_hi),1000);
-	  osDelay(15000);
+	  osDelay(15000);*/
+	  osDelay(1);
   }
   /* USER CODE END StartIndex */
 }
