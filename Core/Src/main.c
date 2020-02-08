@@ -111,16 +111,16 @@ float temp_value = 0;
 float pres_value = 0;
 float hum_value = 0;
 float heatIndex = 0;
-int tmpInthum1 = 0;
-int tmpInthum2 = 0;
-int tmpIntpres1 = 0;
-int tmpIntpres2 = 0;
-int tmpInttemp1 = 0;
-float tmpFractemp = 0;
-int tmpInttemp2 = 0;
-int tmpInthi1 = 0;
-float tmpFrachi = 0;
-int tmpInthi2 = 0;
+int Inthum1 = 0;
+int Inthum2 = 0;
+int Intpres1 = 0;
+int Intpres2 = 0;
+int Inttemp1 = 0;
+float Fractemp = 0;
+int Inttemp2 = 0;
+int Inthi1 = 0;
+float Frachi = 0;
+int Inthi2 = 0;
 uint8_t msg = 0;
 osStatus_t status;
 osEventFlagsId_t evt_id;
@@ -212,10 +212,9 @@ int main(void)
   /* creation of ButtonQueue */
   ButtonQueueHandle = osMessageQueueNew (1, sizeof(uint8_t), &ButtonQueue_attributes);
 
-  evt_id = osEventFlagsNew(NULL);
-
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
+  evt_id = osEventFlagsNew(NULL);
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
@@ -781,7 +780,7 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
-	if(GPIO_Pin == GPIO_PIN_13){ // If I just pressed the User Button
+	if(GPIO_Pin == GPIO_PIN_13){ // Insert the message only if the User Button has been pressed
 	osMessageQueuePut(ButtonQueueHandle, &msg, 0U, 0U);}
 }
 /* USER CODE END 4 */
@@ -800,9 +799,8 @@ void StartPrintTask(void *argument)
   for(;;)
   {
 	  flags = osEventFlagsWait(evt_id, BIT_ALL, osFlagsWaitAll, osWaitForever);
-	  snprintf(str_stamp,100,"HUMIDITY = %d.%02d %%\r\nTEMPERATURE = %d.%02d \xB0""C\r\nPRESSURE = %d.%02d hPa\r\n\r\n", tmpInthum1, tmpInthum2, tmpInttemp1, tmpInttemp2, tmpIntpres1, tmpIntpres2);
+	  snprintf(str_stamp,100,"HUMIDITY = %d.%02d %%\r\nTEMPERATURE = %d.%02d \xB0""C\r\nPRESSURE = %d.%02d hPa\r\n\r\n", Inthum1, Inthum2, Inttemp1, Inttemp2, Intpres1, Intpres2);
 	  HAL_UART_Transmit(&huart1,( uint8_t * )str_stamp,sizeof(str_stamp),2000);
-	 // osDelay(5000);
 	  osDelay(1000);
   }
   /* USER CODE END 5 */ 
@@ -822,9 +820,9 @@ void StartTemp(void *argument)
   for(;;)
   {
 	  temp_value = BSP_TSENSOR_ReadTemp();
-	  tmpInttemp1 = temp_value;
-	  tmpFractemp = temp_value - tmpInttemp1;
-	  tmpInttemp2 = trunc(tmpFractemp * 100);
+	  Inttemp1 = temp_value;
+	  Fractemp = temp_value - Inttemp1;
+	  Inttemp2 = trunc(Fractemp * 100);
 	  osEventFlagsSet(evt_id, BIT_TEMP);
 	  osDelay(3000);
   }
@@ -846,9 +844,9 @@ void StartTPres(void *argument)
   {
 	  flags = osEventFlagsWait(evt_id, BIT_TEMP, osFlagsWaitAll | osFlagsNoClear, osWaitForever);
 	  pres_value = BSP_PSENSOR_ReadPressure();
-	  tmpIntpres1 = pres_value;
-	  tmpFractemp = pres_value - tmpIntpres1;
-	  tmpIntpres2 = trunc(tmpFractemp * 100);
+	  Intpres1 = pres_value;
+	  Fractemp = pres_value - Intpres1;
+	  Intpres2 = trunc(Fractemp * 100);
 	  osEventFlagsSet(evt_id, BIT_PRES);
 	  osDelay(3000);
   }
@@ -870,9 +868,9 @@ void StartHumidity(void *argument)
   {
 	  flags = osEventFlagsWait(evt_id, BIT_TEMP | BIT_PRES, osFlagsWaitAll | osFlagsNoClear, osWaitForever);
 	  hum_value = BSP_HSENSOR_ReadHumidity();
-	  tmpInthum1 = hum_value;
-	  tmpFractemp = hum_value - tmpInthum1;
-	  tmpInthum2 = trunc(tmpFractemp * 100);
+	  Inthum1 = hum_value;
+	  Fractemp = hum_value - Inthum1;
+	  Inthum2 = trunc(Fractemp * 100);
 	  osEventFlagsSet(evt_id, BIT_HUM);
 	  osDelay(3000);
   }
@@ -894,19 +892,17 @@ void StartIndex(void *argument)
   {
 	  status = osMessageQueueGet(ButtonQueueHandle, &msg, NULL, osWaitForever);   // wait for message
 	      if (status == osOK) {
-	    	  //temp_value = (temp_value * (1.8)) + 32;
-	    	  tmpFrachi = (temp_value * (1.8)) + 32;
-	    	  //heatIndex = -42.379 + (2.04901523 * temp_value) + (10.14333127 * hum_value) + (-.22475541 * temp_value*hum_value) + (-0.00683783 * (temp_value*temp_value)) + (-0.05481717 * (hum_value * hum_value)) + (0.00122874 * (temp_value * temp_value) * hum_value) + (0.00085282 * temp_value * (hum_value * hum_value)) + (-0.00000199 * (temp_value * temp_value) * (hum_value * hum_value));
-	    	  heatIndex = -42.379 + (2.04901523 * tmpFrachi) + (10.14333127 * hum_value) + (-.22475541 * tmpFrachi*hum_value) + (-0.00683783 * (tmpFrachi*tmpFrachi)) + (-0.05481717 * (hum_value * hum_value)) + (0.00122874 * (tmpFrachi * tmpFrachi) * hum_value) + (0.00085282 * tmpFrachi * (hum_value * hum_value)) + (-0.00000199 * (tmpFrachi * tmpFrachi) * (hum_value * hum_value));
-	    	  heatIndex = (heatIndex - 32) * 0.55;
-	    	  tmpInthi1 = heatIndex;
-	    	  tmpFractemp = heatIndex - tmpInthi1;
-	    	  tmpInthi2 = trunc(tmpFractemp * 100);
-	    	  snprintf(str_hi,100,"Temperature = %d.%02d \xB0""C, Humidity = %d.%02d %%, Heat Index = %d.%02d\r\n\r\n", tmpInttemp1, tmpInttemp2, tmpInthum1, tmpInthum2, tmpInthi1, tmpInthi2);
+	    	  Frachi = (temp_value * (1.8)) + 32; // Temperature conversion into Fahreneit
+	    	  heatIndex = -42.379 + (2.04901523 * Frachi) + (10.14333127 * hum_value) + (-.22475541 * Frachi*hum_value) + (-0.00683783 * (Frachi*Frachi)) + (-0.05481717 * (hum_value * hum_value)) + (0.00122874 * (Frachi * Frachi) * hum_value) + (0.00085282 * Frachi * (hum_value * hum_value)) + (-0.00000199 * (Frachi * Frachi) * (hum_value * hum_value));
+	    	  heatIndex = (heatIndex - 32) * 0.55; // Heat Index conversion into Celsius
+	    	  Inthi1 = heatIndex;
+	    	  Fractemp = heatIndex - Inthi1;
+	    	  Inthi2 = trunc(Fractemp * 100);
+	    	  snprintf(str_hi, 100, "Temperature = %d.%02d \xB0""C, Humidity = %d.%02d %%, Heat Index = %d.%02d\r\n\r\n", Inttemp1, Inttemp2, Inthum1, Inthum2, Inthi1, Inthi2);
 	    	  HAL_UART_Transmit(&huart1,( uint8_t * )str_hi,sizeof(str_hi),1000);
 	    	  HAL_GPIO_TogglePin(GPIOB, LED2_Pin);
 	      }
-	      	  osDelay(1000);
+	  osDelay(100);
   }
   /* USER CODE END StartIndex */
 }
